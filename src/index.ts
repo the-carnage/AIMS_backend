@@ -5,6 +5,8 @@ import compression from 'compression'
 import { createServer } from 'http'
 import { Server as SocketIOServer } from 'socket.io'
 import dotenv from 'dotenv'
+import path from 'path'
+import { fileURLToPath } from 'url'
 
 import { logger } from './utils/logger.js'
 import { errorHandler } from './middleware/errorHandler.js'
@@ -25,7 +27,8 @@ import { setupSocketHandlers } from './sockets/socketHandlers.js'
 dotenv.config()
 
 const PORT = process.env.PORT || 3001
-const HOST = process.env.HOST || 'localhost'
+// Bind to 0.0.0.0 by default for Render/containers
+const HOST = process.env.HOST || '0.0.0.0'
 const NODE_ENV = process.env.NODE_ENV || 'development'
 
 // Create Express app
@@ -114,6 +117,23 @@ setupSocketHandlers(io)
 
 // Error handling middleware (must be last)
 app.use(errorHandler)
+
+// Serve frontend build (SPA) in production
+// Resolve path to aims-frontend/dist relative to this file
+const currentFilePath = fileURLToPath(import.meta.url)
+const currentDirPath = path.dirname(currentFilePath)
+const repoRootPath = path.resolve(currentDirPath, '..')
+const frontendDistPath = path.resolve(repoRootPath, '../aims-frontend/dist')
+
+if (process.env.SERVE_FRONTEND !== 'false') {
+  app.use(express.static(frontendDistPath))
+
+  // SPA fallback: send index.html for non-API routes
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api')) return next()
+    res.sendFile(path.join(frontendDistPath, 'index.html'))
+  })
+}
 
 // Start server
 httpServer.listen(Number(PORT), HOST, () => {

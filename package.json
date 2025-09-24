@@ -8,6 +8,7 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
+    "postbuild": "node -e \"console.log('Backend built')\"",
     "lint": "eslint src --ext .ts",
     "test": "jest",
     "docs": "swagger-jsdoc -d swagger.config.js src/routes/*.ts -o docs/swagger.json"
